@@ -1,0 +1,4 @@
+azure-identity
+azure-mgmt-loganalytics==13.0.0b6
+azure-mgmt-monitor
+azure-monitor-ingestion

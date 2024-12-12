@@ -76,8 +76,8 @@ Notebook parameters:
 
 ## TODOs
 
-- [] Adopt [custom spark connector](https://github.com/alexott/cyber-spark-data-connectors)
-- [] Table names from a fixed configuration in the library
+- [ ] Adopt [custom spark connector](https://github.com/alexott/cyber-spark-data-connectors)
+- [ ] Table names from a fixed configuration in the library
 
 ## Authors
 

@@ -1,0 +1,42 @@
+bundle:
+  name: system_tables_to_sentinel
+  uuid: a7c09872-bed1-46d1-b1f5-0903fed30784
+
+include:
+  - resources/*.yml
+  - resources/*/*.yml
+
+sync:
+  paths:
+    - resources
+    - src
+    - databricks.yml
+
+artifacts:
+  python_artifact:
+    type: whl
+    build: uv build --wheel
+    dynamic_version: true
+
+targets:
+  dev:
+    # mode: development
+    default: true
+    variables:
+      azure_tenant_id: 9f37a392-f0ae-4280-9796-f1864a10effc
+      sp_client_id: 2d95cc10-ba3e-4ecb-bc23-41c4308d3415
+      sp_client_secret_scope: sschena
+      sp_client_secret_key: sschena_sp_secret
+      subscription_id: 3f2e4d32-8e8d-46d6-82bc-5bb8d962328b
+      resource_group_name: fe-shared-emea-001
+      log_analytics_workspace_name: sschena-log-analytics
+      log_analytics_resource_group_name: fe-shared-emea-001
+      location: eastus2
+      starting_datetime: "2025-08-11"
+      # include_workspace_ids: '["984752964297111"]'
+      # exclude_workspace_ids: '["984752964297111"]'
+      pipeline_continuous_mode: false
+      # pipeline_processing_time: 1 minute
+      catalog_name: sergio_schena
+      schema_name: default
+      checkpoint_root_location: "/Volumes/sergio_schena/default/checkpoints/log_analytics"

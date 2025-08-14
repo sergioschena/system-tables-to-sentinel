@@ -1,0 +1,62 @@
+variables:
+  azure_tenant_id:
+    description: The ID of Entra ID tenant where SP is registered
+    default: ""
+  sp_client_id:
+    description: SP ID
+    default: ""
+  sp_client_secret_scope:
+    description: The name of the secret scope with SP secret
+    default: ""
+  sp_client_secret_key:
+    description: The name of a secret inside secret scope that holds SP Secret
+    default: ""
+  subscription_id:
+    description: Subscription ID to containing the resources
+    default: ""
+  resource_group_name:
+    description: Resource group name containing the DCE and DCR resources
+    default: ""
+  audit_log_table_name:
+    description: Log Analytics table name for Audit Logs
+    default: AdbSystemAccessAudit
+  outbound_network_table_name:
+    description: Log Analytics table name for SEG Access Logs
+    default: AdbSystemAccessOutboundNetwork
+  log_analytics_workspace_name:
+    description: Name of the Log Analytics workspace
+    default: ""
+  log_analytics_resource_group_name:
+    description: Resource group name of the Log Analytics workspace
+    default: ""
+  location:
+    description: Location for the creation of DCE and DCR
+    default: ""
+  starting_datetime:
+    description: Date time string to filter audit log events, e.g. '2025-01-01' or '2025-01-01 00:00:00'
+    default: ""
+  include_workspace_ids:
+    description: JSON string specifying a list of the workspace IDs to include
+    default: "[]"
+  exclude_workspace_ids:
+    description: JSON string specifying a list of the workspace IDs to exclude
+    default: "[]"
+  pipeline_continuous_mode:
+    description: Processing time trigger for the pipeline. If empty, the default is applied
+    default: false
+  pipeline_processing_time:
+    description: Processing time trigger for the pipeline. If empty, the default is applied
+    default: ""
+  catalog_name:
+    description: Catalog name for the Lakeflow Declarative Pipeline
+    default: ""
+  schema_name: 
+    description: Schema name for the Lakeflow Declarative Pipeline
+    default: ""
+  checkpoint_root_location:
+    description: Root path, i.e. a UC volume, to store Structured Streaming checkpoints for the job
+    default: ""
+  # job_processing_time:
+  #   description: Processing time trigger for the job. If empty, `availableNow` trigger is used
+  #   default: ""
+  

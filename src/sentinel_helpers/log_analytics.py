@@ -1,4 +1,3 @@
-from azure.identity import ClientSecretCredential, DefaultAzureCredential
 from azure.core.exceptions import ResourceNotFoundError
 
 from azure.mgmt.loganalytics import LogAnalyticsManagementClient

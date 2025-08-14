@@ -1,0 +1,58 @@
+resources:
+  jobs:
+    system_table_to_azure_monitor_job:
+      name: System Tables to Azure Monitor
+      tasks:
+        - task_key: Audit_Log
+          notebook_task:
+            notebook_path: ../src/main.ipynb
+            source: WORKSPACE
+            base_parameters:
+              log_analytics_table_name: ${var.audit_log_table_name}
+              system_table_name: system.access.audit
+              checkpoint_volume_location: "${var.checkpoint_root_location}/audit_log"
+          min_retry_interval_millis: 900000
+          disable_auto_optimization: true
+          environment_key: Default
+        - task_key: Outbound_Network
+          notebook_task:
+            notebook_path: ../src/main.ipynb
+            source: WORKSPACE
+            base_parameters:
+              log_analytics_table_name: ${var.outbound_network_table_name}
+              system_table_name: system.access.outbound_network
+              checkpoint_volume_location: "${var.checkpoint_root_location}/outbound_network"
+          min_retry_interval_millis: 900000
+          disable_auto_optimization: true
+          environment_key: Default
+      parameters:
+        - name: lib_path
+          default: ${workspace.artifact_path}
+        - name: tenant_id
+          default: ${var.azure_tenant_id}
+        - name: subscription_id
+          default: ${var.subscription_id}
+        - name: sp_client_id
+          default: ${var.sp_client_id}
+        - name: sp_client_secret_scope
+          default: ${var.sp_client_secret_scope}
+        - name: sp_client_secret_key
+          default: ${var.sp_client_secret_key}
+        - name: resource_group_name
+          default: ${var.resource_group_name}
+        - name: starting_datetime
+          default: ${var.starting_datetime}
+        - name: include_workspace_ids
+          default: ${var.include_workspace_ids}
+        - name: exclude_workspace_ids
+          default: ${var.exclude_workspace_ids}
+        - name: processing_time
+          default: ""
+        #   default: ${var.job_processing_time}
+      queue:
+        enabled: true
+      environments:
+        - environment_key: Default
+          spec:
+            environment_version: "3"
+      performance_target: PERFORMANCE_OPTIMIZED

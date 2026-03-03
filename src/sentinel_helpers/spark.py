@@ -57,15 +57,13 @@ class AzureMonitorWriter:
         self.client_id = self.options.get("client_id")
         self.client_secret = self.options.get("client_secret")
         self.body_col = self.options.get("body_col")
-        self.batch_size_rows = int(self.options.get("batch_rows_rows", "10000"))
+        self.batch_size_rows = int(self.options.get("batch_size_rows", "10000"))
         self.batch_size_bytes = int(self.options.get("batch_size_bytes", "1000000"))
-        assert self.dce_url is not None
-        assert self.dcr_id is not None
-        assert self.dcs is not None
-        assert self.tenant_id is not None
-        assert self.client_id is not None
-        assert self.client_secret is not None
-        assert self.batch_size_bytes <= 1_000_000
+        for required in ("dce_url", "dcr_id", "dcs", "tenant_id", "client_id", "client_secret"):
+            if self.options.get(required) is None:
+                raise ValueError(f"Missing required option: '{required}'")
+        if self.batch_size_bytes > 1_000_000:
+            raise ValueError(f"batch_size_bytes ({self.batch_size_bytes}) exceeds the Azure Monitor limit of 1,000,000 bytes")
 
     def _send_to_sentinel(self, s: LogsIngestionClient, msgs: list):
         from azure.core.exceptions import HttpResponseError
@@ -117,27 +115,12 @@ class AzureMonitorWriter:
 
 
 class AzureMonitorBatchWriter(AzureMonitorWriter, DataSourceWriter):
-    def __init__(self, options):
-        super().__init__(options)
+    pass
 
 
 class AzureMonitorStreamWriter(AzureMonitorWriter, DataSourceStreamWriter):
-    def __init__(self, options):
-        super().__init__(options)
-
     def commit(self, messages: list[WriterCommitMessage | None], batchId: int) -> None:
-        """Receives a sequence of :class:`WriterCommitMessage` when all write tasks have succeeded, then decides what to do with it.
-        In this FakeStreamWriter, the metadata of the microbatch(number of rows and partitions) is written into a JSON file inside commit().
-        """
-        # status = dict(num_partitions=len(messages), rows=sum(m.count for m in messages))
-        # with open(os.path.join(self.path, f"{batchId}.json"), "a") as file:
-        #     file.write(json.dumps(status) + "\n")
         pass
 
     def abort(self, messages: list[WriterCommitMessage | None], batchId: int) -> None:
-        """Receives a sequence of :class:`WriterCommitMessage` from successful tasks when some other tasks have failed, then decides what to do with it.
-        In this FakeStreamWriter, a failure message is written into a text file inside abort().
-        """
-        # with open(os.path.join(self.path, f"{batchId}.txt"), "w") as file:
-        #     file.write(f"failed in batch {batchId}")
         pass

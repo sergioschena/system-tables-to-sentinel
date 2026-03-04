@@ -1,0 +1,51 @@
+resources:
+  jobs:
+    azure_monitor_setup:
+      name: Azure Monitor Setup
+      tasks:
+        - task_key: Audit_Log
+          notebook_task:
+            notebook_path: ../src/audit_setup.ipynb
+            source: WORKSPACE
+            base_parameters:
+              table_name: ${var.audit_log_table_name}
+          min_retry_interval_millis: 900000
+          disable_auto_optimization: true
+          environment_key: Default
+        - task_key: Outbound_Network
+          notebook_task:
+            notebook_path: ../src/network_setup.ipynb
+            source: WORKSPACE
+            base_parameters:
+              table_name: ${var.outbound_network_table_name}
+          min_retry_interval_millis: 900000
+          disable_auto_optimization: true
+          environment_key: Default
+      parameters:
+        - name: lib_path
+          default: ${workspace.artifact_path}
+        - name: tenant_id
+          default: ${var.azure_tenant_id}
+        - name: subscription_id
+          default: ${var.subscription_id}
+        - name: sp_client_id
+          default: ${var.sp_client_id}
+        - name: sp_client_secret_scope
+          default: ${var.sp_client_secret_scope}
+        - name: sp_client_secret_key
+          default: ${var.sp_client_secret_key}
+        - name: resource_group_name
+          default: ${var.resource_group_name}
+        - name: location
+          default: ${var.location}
+        - name: log_analytics_workspace_name
+          default: ${var.log_analytics_workspace_name}
+        - name: log_analytics_resource_group_name
+          default: ${var.log_analytics_resource_group_name}
+      queue:
+        enabled: true
+      environments:
+        - environment_key: Default
+          spec:
+            environment_version: "3"
+      performance_target: PERFORMANCE_OPTIMIZED

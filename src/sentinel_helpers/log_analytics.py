@@ -1,4 +1,4 @@
-from azure.identity import ClientSecretCredential, DefaultAzureCredential
+from azure.core.credentials import TokenCredential
 from azure.core.exceptions import ResourceNotFoundError
 
 from azure.mgmt.loganalytics import LogAnalyticsManagementClient
@@ -18,14 +18,25 @@ from azure.mgmt.monitor.models import (
     LogAnalyticsDestination,
 )
 
+_COLUMN_TYPE_MAP: dict[ColumnTypeEnum, KnownColumnDefinitionType] = {
+    ColumnTypeEnum.BOOLEAN: KnownColumnDefinitionType.BOOLEAN,
+    ColumnTypeEnum.DATE_TIME: KnownColumnDefinitionType.DATETIME,
+    ColumnTypeEnum.DYNAMIC: KnownColumnDefinitionType.DYNAMIC,
+    ColumnTypeEnum.GUID: KnownColumnDefinitionType.STRING,
+    ColumnTypeEnum.INT: KnownColumnDefinitionType.INT,
+    ColumnTypeEnum.LONG: KnownColumnDefinitionType.LONG,
+    ColumnTypeEnum.REAL: KnownColumnDefinitionType.REAL,
+    ColumnTypeEnum.STRING: KnownColumnDefinitionType.STRING,
+}
+
 
 def get_table(
-    credentials,
+    credentials: TokenCredential,
     subscription_id: str,
     resource_group_name: str,
     workspace_name: str,
     table_name: str,
-):
+) -> Table | None:
     log_analytics_client = LogAnalyticsManagementClient(credentials, subscription_id)
     try:
         return log_analytics_client.tables.get(
@@ -33,19 +44,18 @@ def get_table(
             workspace_name=workspace_name,
             table_name=table_name,
         )
-
     except ResourceNotFoundError:
         return None
 
 
 def create_table(
-    table_name: str,
-    table: Table,
-    credentials,
+    credentials: TokenCredential,
     subscription_id: str,
     resource_group_name: str,
     workspace_name: str,
-):
+    table_name: str,
+    table: Table,
+) -> None:
     log_analytics_client = LogAnalyticsManagementClient(credentials, subscription_id)
     log_analytics_client.tables.begin_create_or_update(
         resource_group_name=resource_group_name,
@@ -55,7 +65,12 @@ def create_table(
     ).result()
 
 
-def get_dce(credentials, subscription_id: str, resource_group_name: str, dce_name: str):
+def get_dce(
+    credentials: TokenCredential,
+    subscription_id: str,
+    resource_group_name: str,
+    dce_name: str,
+) -> DataCollectionEndpointResource | None:
     monitor_management_client = MonitorManagementClient(
         credentials, subscription_id, api_version="2022-06-01"
     )
@@ -68,12 +83,12 @@ def get_dce(credentials, subscription_id: str, resource_group_name: str, dce_nam
 
 
 def create_dce(
-    location: str,
-    credentials,
+    credentials: TokenCredential,
     subscription_id: str,
     resource_group_name: str,
     dce_name: str,
-):
+    location: str,
+) -> DataCollectionEndpointResource:
     monitor_management_client = MonitorManagementClient(
         credentials, subscription_id, api_version="2022-06-01"
     )
@@ -90,7 +105,12 @@ def create_dce(
     )
 
 
-def get_dcr(credentials, subscription_id: str, resource_group_name: str, dcr_name: str):
+def get_dcr(
+    credentials: TokenCredential,
+    subscription_id: str,
+    resource_group_name: str,
+    dcr_name: str,
+) -> DataCollectionRuleResource | None:
     monitor_management_client = MonitorManagementClient(
         credentials, subscription_id, api_version="2022-06-01"
     )
@@ -103,40 +123,28 @@ def get_dcr(credentials, subscription_id: str, resource_group_name: str, dcr_nam
 
 
 def create_dcr(
+    credentials: TokenCredential,
+    subscription_id: str,
+    resource_group_name: str,
+    dce_name: str,
+    dcr_name: str,
+    location: str,
     log_analytics_resource_group_name: str,
     log_analytics_workspace_name: str,
     log_analytics_table_schema: Schema,
-    raw_stream_declaration_name: str,
     log_analytics_table_name: str,
-    location: str,
-    credentials,
-    subscription_id: str,
-    resource_group_name: str,
-    dcr_name: str,
-    dce_name: str,
-):
-    type_map = {
-        ColumnTypeEnum.BOOLEAN: KnownColumnDefinitionType.BOOLEAN,
-        ColumnTypeEnum.DATE_TIME: KnownColumnDefinitionType.DATETIME,
-        ColumnTypeEnum.DYNAMIC: KnownColumnDefinitionType.DYNAMIC,
-        ColumnTypeEnum.GUID: KnownColumnDefinitionType.STRING,
-        ColumnTypeEnum.INT: KnownColumnDefinitionType.INT,
-        ColumnTypeEnum.LONG: KnownColumnDefinitionType.LONG,
-        ColumnTypeEnum.REAL: KnownColumnDefinitionType.REAL,
-        ColumnTypeEnum.STRING: KnownColumnDefinitionType.STRING,
-    }
-
+    raw_stream_declaration_name: str,
+) -> DataCollectionRuleResource:
     log_analytics_client = LogAnalyticsManagementClient(credentials, subscription_id)
     log_analytics_workspace_id = log_analytics_client.workspaces.get(
         resource_group_name=log_analytics_resource_group_name,
         workspace_name=log_analytics_workspace_name,
     ).id
 
-    dce = get_dce(credentials, subscription_id, resource_group_name, dce_name)
-    dce_id = dce.id
+    dce_id = get_dce(credentials, subscription_id, resource_group_name, dce_name).id
 
     raw_stream_declaration_columns = [
-        ColumnDefinition(name=c.name, type=type_map[c.type])
+        ColumnDefinition(name=c.name, type=_COLUMN_TYPE_MAP[c.type])
         for c in log_analytics_table_schema.columns
         if c.name != "TimeIngested"
     ]
@@ -176,3 +184,40 @@ def create_dcr(
         data_collection_rule_name=dcr_name,
         body=data_collection_rule,
     )
+
+
+def ensure_azure_resources(
+    credentials: TokenCredential,
+    subscription_id: str,
+    resource_group_name: str,
+    location: str,
+    log_analytics_resource_group_name: str,
+    log_analytics_workspace_name: str,
+    table_name: str,
+    table_schema: Schema,
+    retention_in_days: int = 180,
+) -> None:
+    """Idempotently creates the Log Analytics table, DCE, and DCR for a system table pipeline."""
+    log_analytics_table_name = f"{table_name}_CL"
+    dce_name = f"{table_name}-dce"
+    dcr_name = f"{table_name}-dcr"
+    raw_stream_declaration_name = f"Custom-{table_name}RawData"
+
+    table = Table(retention_in_days=retention_in_days, schema=table_schema)
+    if not get_table(credentials, subscription_id, log_analytics_resource_group_name, log_analytics_workspace_name, log_analytics_table_name):
+        create_table(credentials, subscription_id, log_analytics_resource_group_name, log_analytics_workspace_name, log_analytics_table_name, table)
+        print(f"✅ Table {log_analytics_table_name} created!")
+    else:
+        print(f"⏩ Table creation skipped: {log_analytics_table_name} already exists.")
+
+    if not get_dce(credentials, subscription_id, resource_group_name, dce_name):
+        create_dce(credentials, subscription_id, resource_group_name, dce_name, location)
+        print(f"✅ DCE {dce_name} created!")
+    else:
+        print(f"⏩ DCE creation skipped: {dce_name} already exists.")
+
+    if not get_dcr(credentials, subscription_id, resource_group_name, dcr_name):
+        create_dcr(credentials, subscription_id, resource_group_name, dce_name, dcr_name, location, log_analytics_resource_group_name, log_analytics_workspace_name, table_schema, log_analytics_table_name, raw_stream_declaration_name)
+        print(f"✅ DCR {dcr_name} created!")
+    else:
+        print(f"⏩ DCR creation skipped: {dcr_name} already exists.")

@@ -1,0 +1,27 @@
+resources:
+  pipelines:
+    system_tables_to_azure_monitor_pipeline:
+      name: System Tables to Azure Monitor
+      configuration:
+        "conf.lib_path": ${workspace.artifact_path}
+        "conf.processing_time": ${var.pipeline_processing_time}
+        "conf.audit_log_table_name": ${var.audit_log_table_name}
+        "conf.outbound_network_table_name": ${var.outbound_network_table_name}
+        "conf.starting_datetime": ${var.starting_datetime}
+        "conf.include_workspace_ids": ${var.include_workspace_ids}
+        "conf.exclude_workspace_ids": ${var.exclude_workspace_ids}
+        "conf.tenant_id": ${var.azure_tenant_id}
+        "conf.subscription_id": ${var.subscription_id}
+        "conf.sp_client_id": ${var.sp_client_id}
+        "conf.sp_client_secret_scope": ${var.sp_client_secret_scope}
+        "conf.sp_client_secret_key": ${var.sp_client_secret_key}
+        "conf.resource_group_name": ${var.resource_group_name}
+      libraries:
+        - notebook:
+            path: ../src/main-dlt.ipynb
+      catalog: ${var.catalog_name}
+      schema: ${var.schema_name}
+      channel: CURRENT
+      development: false
+      serverless: true
+      continuous: ${var.pipeline_continuous_mode}
